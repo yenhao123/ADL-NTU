@@ -1,0 +1,11 @@
+accelerate launch run_qa_no_pretrained.py \
+  --tokenizer_name bert-base-chinese \
+  --train_file ../dataset/train.json \
+  --validation_file ../dataset/valid.json \
+  --context_file ../dataset/context.json \
+  --learning_rate 3e-5 \
+  --num_train_epochs 1 \
+  --max_seq_length 512 \
+  --checkpointing_steps 3000 \
+  --output_dir ../tmp/debug_squad/ \
+  --with_tracking
