@@ -1,0 +1,12 @@
+accelerate launch train.py  \
+    --model_name_or_path google/mt5-small \
+    --train_file data/train.jsonl \
+    --validation_file data/public.jsonl \
+    --output_dir model/prefix10 \
+    --preprocessing_num_workers 8 \
+    --per_device_train_batch_size 8 \
+    --num_train_epochs 10 \
+    --source_prefix "summarize: " \
+    --text_column "maintext" \
+    --summary_column "title" \
+    --with_tracking
