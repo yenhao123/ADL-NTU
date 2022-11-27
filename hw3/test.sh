@@ -1,7 +1,8 @@
-python3 test.py \
-    --model_name_or_path model/epoch20 \
-    --test_file data/sample_test.jsonl \
+accelerate launch test.py \
+    --model_name_or_path model/prefix20 \
+    --test_file data/public.jsonl \
     --source_prefix "summarize: " \
     --preprocessing_num_workers 8 \
     --text_column "maintext" \
-    --summary_column "title" 
+    --summary_column "title" \
+    --outputPath results/eval/output.jsonl

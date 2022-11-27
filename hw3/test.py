@@ -354,19 +354,20 @@ def main():
         result = json.loads(jsonStr)
         ids.append(result["id"])
 
-    print(ids)
-
     #save predictions
-    predArr = []
-    for i in range(len(preds)):
-        resDict = {
-            "title" : preds[i],
-            "id" : ids[i]
-        }
-        predArr.append(resDict)
+    if os.path.exists(args.outputPath):
+        return
     
-    with open("results/test/result.json","w") as f:
-        json.dump(predArr,f,ensure_ascii=False)
+    with open(args.outputPath,"a") as f:
+        for i in range(len(preds)):
+            resDict = {
+                "title" : preds[i],
+                "id" : int(ids[i])
+            }
+            json.dump(resDict,f,ensure_ascii=False)
+            f.write("\n")
+    
+
 
 if __name__ == "__main__":
     main()

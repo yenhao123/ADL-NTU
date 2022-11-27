@@ -259,6 +259,13 @@ def parse_args():
             "Only applicable when `--with_tracking` is passed."
         ),
     )
+    parser.add_argument(
+        "--outputPath",
+        type=str,
+        default="./output/jsonl"
+    )
+
+
     args = parser.parse_args()
 
     # Sanity checks
