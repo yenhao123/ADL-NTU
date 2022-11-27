@@ -27,6 +27,10 @@ git clone https://github.com/huggingface/transformers
 cd transformers
 pip install .
 ```
+>Then cd in the example folder of your choice and run
+```
+pip install -r requirements.txt
+```
 
 ### Training
 ```
