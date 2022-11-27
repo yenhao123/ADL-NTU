@@ -21,6 +21,12 @@ cd ADL22-HW3
 pip install -e tw_rouge
 ```
 
+setup transformers
+```
+git clone https://github.com/huggingface/transformers
+cd transformers
+pip install .
+```
 
 ### Training
 ```
