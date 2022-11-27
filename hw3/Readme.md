@@ -20,6 +20,13 @@ git clone https://github.com/moooooser999/ADL22-HW3.git
 cd ADL22-HW3
 pip install -e tw_rouge
 ```
+>when data can not download
+```
+1. download the data by TA
+2. unzip data.zip to data
+3. put data to .cache/ckiptagger
+```
+
 
 setup transformers
 ```
