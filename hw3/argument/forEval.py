@@ -59,6 +59,9 @@ def parse_args():
         "--validation_file", type=str, default=None, help="A csv or a json file containing the validation data."
     )
     parser.add_argument(
+        "--test_file", type=str, default=None, help="A csv or a json file containing the validation data."
+    )
+    parser.add_argument(
         "--ignore_pad_token_for_loss",
         type=bool,
         default=True,
@@ -128,10 +131,6 @@ def parse_args():
         ),
     )
     parser.add_argument(
-        "--do_sample", 
-        action="store_true"
-    )
-    parser.add_argument(
         "--pad_to_max_length",
         action="store_true",
         help="If passed, pad all samples to `max_length`. Otherwise, dynamic padding is used.",
@@ -179,6 +178,12 @@ def parse_args():
     )
     parser.add_argument(
         "--per_device_eval_batch_size",
+        type=int,
+        default=8,
+        help="Batch size (per device) for the evaluation dataloader.",
+    )
+    parser.add_argument(
+        "--per_device_test_batch_size",
         type=int,
         default=8,
         help="Batch size (per device) for the evaluation dataloader.",
@@ -254,10 +259,20 @@ def parse_args():
             "Only applicable when `--with_tracking` is passed."
         ),
     )
+    parser.add_argument(
+        "--outputPath",
+        type=str,
+        default="./output.jsonl"
+    )
+    parser.add_argument(
+        "--lossANDmetricPath",
+        type=str,
+        default="./lossOutput.jsonl"
+    )
     args = parser.parse_args()
 
     # Sanity checks
-    if args.dataset_name is None and args.train_file is None and args.validation_file is None:
+    if args.dataset_name is None and args.train_file is None and args.validation_file is None and args.test_file is None:
         raise ValueError("Need either a dataset name or a training/validation file.")
     else:
         if args.train_file is not None:
@@ -266,6 +281,9 @@ def parse_args():
         if args.validation_file is not None:
             extension = args.validation_file.split(".")[-1]
             assert extension in ["csv", "json","jsonl"], "`validation_file` should be a csv or a json file."
+        if args.test_file is not None:
+            extension = args.test_file.split(".")[-1]
+            assert extension in ["csv", "json","jsonl"], "`test_file` should be a csv or a json file."
 
     if args.push_to_hub:
         assert args.output_dir is not None, "Need an `output_dir` to create a repo when `--push_to_hub` is passed."

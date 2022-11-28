@@ -18,14 +18,16 @@ Fine-tuning a 🤗 Transformers model on summarization.
 """
 # You can also adapt this script on your own summarization task. Pointers for this are left as comments.
 
+import os
+device = 0
+os.environ["CUDA_VISIBLE_DEVICES"] = str(device)
+
 import argparse
 import json
 import logging
 import math
-import os
 import random
 from pathlib import Path
-
 import datasets
 import nltk
 import numpy as np
@@ -53,10 +55,15 @@ from transformers import (
 )
 from transformers.utils import check_min_version, get_full_repo_name, is_offline_mode, send_example_telemetry
 from transformers.utils.versions import require_version
+import tensorflow as tf
+config = tf.compat.v1.ConfigProto()
+config.gpu_options.per_process_gpu_memory_fraction = 0.3 # 占用GPU的显存
+session = tf.compat.v1.Session(config=config)
 
 # by own directory
 from argument import forEval
-from metric import get_rouge
+from tw_rouge import get_rouge
+
 
 # Will error if the minimal version of Transformers is not installed. Remove at your own risks.
 check_min_version("4.25.0.dev0")
@@ -299,7 +306,7 @@ def main():
     # Eval!
     completed_steps = 0
     starting_epoch = 0
-
+    
     model.eval()
     if args.val_max_target_length is None:
         args.val_max_target_length = args.max_target_length
@@ -314,9 +321,7 @@ def main():
             generated_tokens = accelerator.unwrap_model(model).generate(
                 batch["input_ids"],
                 attention_mask=batch["attention_mask"],
-                max_length = args.val_max_target_length if args is not None else config.max_length,
-                num_beams = args.num_beams,
-                do_sample = args.do_sample
+                **gen_kwargs,
 
             )
 
@@ -348,7 +353,7 @@ def main():
     preds = [p for pred in preds2D for p in pred]
     print(preds)
     labels = [l for label in labels2D for l in label]
-
+    
     '''
     preds = ["Anker新款真無線藍牙耳機Liberty Air 2 Pro 引進台灣市場"]
     labels = ["Anker新款真無線藍牙耳機Liberty Air 2 Pro 引進台灣市場"]
@@ -359,7 +364,7 @@ def main():
     logger.info(result)
 
     #metrics
-    with open("lossANDmetric/eval/result.json","w") as f:
+    with open(args.lossANDmetricPath,"w") as f:
         json.dump(result,f,ensure_ascii=False)
     
     #save predictions

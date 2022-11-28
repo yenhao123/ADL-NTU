@@ -17,15 +17,14 @@
 Fine-tuning a 🤗 Transformers model on summarization.
 """
 # You can also adapt this script on your own summarization task. Pointers for this are left as comments.
+import os
+device = 3 
+os.environ["CUDA_VISIBLE_DEVICES"] = str(device)
 
 import argparse
 import json
 import logging
 import math
-import os
-device = 2
-os.environ["CUDA_VISIBLE_DEVICES"] = str(device)
-
 import random
 from pathlib import Path
 
@@ -56,10 +55,15 @@ from transformers import (
 )
 from transformers.utils import check_min_version, get_full_repo_name, is_offline_mode, send_example_telemetry
 from transformers.utils.versions import require_version
-from torchsummary import summary
+
+import tensorflow as tf
+config = tf.compat.v1.ConfigProto()
+config.gpu_options.per_process_gpu_memory_fraction = 0.3 # 占用GPU30%的显存
+session = tf.compat.v1.Session(config=config)
 
 # by own directory
-from argument import forTest
+from argument import forEval
+from tw_rouge import get_rouge
 
 # Will error if the minimal version of Transformers is not installed. Remove at your own risks.
 check_min_version("4.25.0.dev0")
@@ -92,7 +96,7 @@ summarization_name_mapping = {
 }
 
 def main():
-    args = forTest.parse_args()
+    args = forEval.parse_args()
     # Sending telemetry. Tracking the example usage helps us better allocate resources to maintain them. The
     # information sent is the one passed as arguments along with your Python/PyTorch versions.
     send_example_telemetry("run_summarization_no_trainer", args)
@@ -153,17 +157,19 @@ def main():
     #
     # In distributed training, the load_dataset function guarantee that only one local process can concurrently
     # download the dataset.
+
     if args.dataset_name is not None:
         # Downloading and loading a dataset from the hub.
         raw_datasets = load_dataset(args.dataset_name)
     else:
         data_files = {}
-        if args.test_file is not None:
-            data_files["test"] = args.test_file
+        if args.validation_file is not None:
+            data_files["validation"] = args.validation_file
         
-        extension = data_files["test"].split(".")[-1]
+        extension = data_files["validation"].split(".")[-1]
         extension = "json" if extension == "jsonl" else extension
         raw_datasets = load_dataset(extension, data_files=data_files)
+
     # See more about loading any type of standard or custom dataset (from files, python dict, pandas DataFrame, etc) at
     # https://huggingface.co/docs/datasets/loading_datasets.html.
 
@@ -211,7 +217,7 @@ def main():
 
     # Preprocessing the datasets.
     # First we tokenize all the texts.
-    column_names = raw_datasets["test"].column_names
+    column_names = raw_datasets["validation"].column_names
 
     # Get the column names for input/target.
     dataset_columns = summarization_name_mapping.get(args.dataset_name, None)
@@ -223,6 +229,14 @@ def main():
             raise ValueError(
                 f"--text_column' value '{args.text_column}' needs to be one of: {', '.join(column_names)}"
             )
+    if args.summary_column is None:
+        summary_column = dataset_columns[1] if dataset_columns is not None else column_names[1]
+    else:
+        summary_column = args.summary_column
+        if summary_column not in column_names:
+            raise ValueError(
+                f"--summary_column' value '{args.summary_column}' needs to be one of: {', '.join(column_names)}"
+            )
 
     # Temporarily set max_target_length for training.
     max_target_length = args.max_target_length
@@ -230,9 +244,21 @@ def main():
 
     def preprocess_function(examples):
         inputs = examples[text_column]
-        #targets = examples[summary_column]
+        targets = examples[summary_column]
         inputs = [prefix + inp for inp in inputs]
         model_inputs = tokenizer(inputs, max_length=args.max_source_length, padding=padding, truncation=True)
+
+        # Tokenize targets with the `text_target` keyword argument
+        labels = tokenizer(text_target=targets, max_length=max_target_length, padding=padding, truncation=True)
+
+        # If we are padding here, replace all tokenizer.pad_token_id in the labels by -100 when we want to ignore
+        # padding in the loss.
+        if padding == "max_length" and args.ignore_pad_token_for_loss:
+            labels["input_ids"] = [
+                [(l if l != tokenizer.pad_token_id else -100) for l in label] for label in labels["input_ids"]
+            ]
+
+        model_inputs["labels"] = labels["input_ids"]
         return model_inputs
 
     with accelerator.main_process_first():
@@ -245,7 +271,7 @@ def main():
             desc="Running tokenizer on dataset",
         )
 
-    test_dataset = processed_datasets["test"]
+    eval_dataset = processed_datasets["validation"]
 
     label_pad_token_id = -100 if args.ignore_pad_token_for_loss else tokenizer.pad_token_id
     data_collator = DataCollatorForSeq2Seq(
@@ -255,19 +281,21 @@ def main():
         pad_to_multiple_of=8 if accelerator.use_fp16 else None,
     )
 
-    def postprocess_text(preds):
+    def postprocess_text(preds, labels):
         preds = [pred.strip() for pred in preds]
+        labels = [label.strip() for label in labels]
 
         # rougeLSum expects newline after each sentence
         preds = ["\n".join(nltk.sent_tokenize(pred)) for pred in preds]
+        labels = ["\n".join(nltk.sent_tokenize(label)) for label in labels]
 
-        return preds
+        return preds, labels
 
-    test_dataloader = DataLoader(test_dataset, collate_fn=data_collator, batch_size=args.per_device_test_batch_size)
+    eval_dataloader = DataLoader(eval_dataset, collate_fn=data_collator, batch_size=args.per_device_eval_batch_size)
 
     # Prepare everything with our `accelerator`.
-    model, test_dataloader = accelerator.prepare(
-        model, test_dataloader
+    model, eval_dataloader = accelerator.prepare(
+        model, eval_dataloader
     )
 
     # Figure out how many steps we should save the Accelerator states
@@ -275,12 +303,11 @@ def main():
     if checkpointing_steps is not None and checkpointing_steps.isdigit():
         checkpointing_steps = int(checkpointing_steps)
 
-    # Test!
+    # Eval!
     completed_steps = 0
     starting_epoch = 0
 
     model.eval()
-
     if args.val_max_target_length is None:
         args.val_max_target_length = args.max_target_length
 
@@ -288,8 +315,8 @@ def main():
         "max_length": args.val_max_target_length if args is not None else config.max_length,
         "num_beams": args.num_beams,
     }
-    preds2D = []
-    for step, batch in enumerate(test_dataloader):
+    preds2D,labels2D = [],[]
+    for step, batch in enumerate(eval_dataloader):
         with torch.no_grad():
             generated_tokens = accelerator.unwrap_model(model).generate(
                 batch["input_ids"],
@@ -300,41 +327,56 @@ def main():
             generated_tokens = accelerator.pad_across_processes(
                 generated_tokens, dim=1, pad_index=tokenizer.pad_token_id
             )
+            labels = batch["labels"]
+            if not args.pad_to_max_length:
+                # If we did not pad to max length, we need to pad the labels too
+                labels = accelerator.pad_across_processes(batch["labels"], dim=1, pad_index=tokenizer.pad_token_id)
 
+            generated_tokens, labels = accelerator.gather_for_metrics((generated_tokens, labels))
             generated_tokens = generated_tokens.cpu().numpy()
+            labels = labels.cpu().numpy()
 
+            if args.ignore_pad_token_for_loss:
+                # Replace -100 in the labels as we can't decode them.
+                labels = np.where(labels != -100, labels, tokenizer.pad_token_id)
             if isinstance(generated_tokens, tuple):
                 generated_tokens = generated_tokens[0]
             decoded_preds = tokenizer.batch_decode(generated_tokens, skip_special_tokens=True)
-    
-            decoded_preds = postprocess_text(decoded_preds)
+            decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
+
+            decoded_preds, decoded_labels = postprocess_text(decoded_preds, decoded_labels)
             preds2D.append(decoded_preds)
+            labels2D.append(decoded_labels)
+    
 
     preds = [p for pred in preds2D for p in pred]
+    print(preds)
+    labels = [l for label in labels2D for l in label]
 
-    #get ids for save
-    with open(args.test_file,"r") as f:
-        jsonList = list(f)
+    result = get_rouge(preds,labels)
+    result = {key: round(value['f'] * 100,4) for key, value in result.items()}
+
+    logger.info(result)
+
+    #metrics
+    with open(args.lossANDmetricPath,"w") as f:
+        json.dump(result,f,ensure_ascii=False)
     
-    ids = []
-    for jsonStr in jsonList:
-        result = json.loads(jsonStr)
-        ids.append(result["id"])
-
     #save predictions
-    if os.path.exists(args.outputPath):
-        return
+    if len(preds) != len(labels):
+        print("pred and labels are not the same size.")
+        exit(0)
     
-    with open(args.outputPath,"a") as f:
-        for i in range(len(preds)):
-            resDict = {
-                "title" : preds[i],
-                "id" : ids[i]
-            }
-            json.dump(resDict,f,ensure_ascii=False)
-            f.write("\n")
+    predArr = []
+    for i in range(len(preds)):
+        resDict = {
+            "predict" : preds[i],
+            "label" : labels[i]
+        }
+        predArr.append(resDict)
     
-
+    with open("results/eval/result.json","w") as f:
+        json.dump(predArr,f,ensure_ascii=False)
 
 if __name__ == "__main__":
     main()
