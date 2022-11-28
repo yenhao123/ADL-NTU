@@ -8,11 +8,10 @@ learn
 ## Environment
 ```
 # If you have conda, we recommend you to build a conda environment called "adl-hw3"
-make
 conda activate adl-hw3
-pip install -r requirements.txt
-pip install torch==1.12.0+cu113 torchvision==0.13.0+cu113 torchaudio==0.12.0 --extra-index-url https://download.pytorch.org/whl/cu113
+conda install python=3.8
 ```
+
 
 setup tw_rogue
 ```
@@ -37,6 +36,14 @@ pip install .
 >Then cd in the example folder of your choice and run
 ```
 pip install -r requirements.txt
+```
+
+setup env
+```
+make
+pip install -r requirements.txt
+pip install torch==1.12.0+cu113 torchvision==0.13.0+cu113 torchaudio==0.12.0 --extra-index-url https://download.pytorch.org/whl/cu113
+pip install tensorflow
 ```
 
 ### Training
