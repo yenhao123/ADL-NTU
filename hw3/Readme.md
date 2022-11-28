@@ -12,7 +12,10 @@ make
 conda activate adl-hw3
 pip install -r requirements.txt
 pip install torch==1.12.0+cu113 torchvision==0.13.0+cu113 torchaudio==0.12.0 --extra-index-url https://download.pytorch.org/whl/cu113
+conda install python=3.6
+pip install tensorflow
 ```
+
 
 setup tw_rogue
 ```
