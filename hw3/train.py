@@ -87,45 +87,6 @@ summarization_name_mapping = {
     "wiki_summary": ("article", "highlights"),
 }
 
-def dataPreprocessed(args):
-    
-    trainFilePath = args.dataPreproOutputDir + "/train.json"
-    evalFilePath = args.dataPreproOutputDir + "/validation.json"
-    if os.path.exists(trainFilePath) and os.path.exists(evalFilePath):
-        return trainFilePath,evalFilePath
-    elif os.path.exists(trainFilePath)==False and os.path.exists(evalFilePath):
-        print("error on preprocessed file")
-        exit(0)
-    elif os.path.exists(trainFilePath) and os.path.exists(evalFilePath)==False:
-        print("error on preprocessed file")
-        exit(0)
-        
-    #trainData
-    with open(args.train_file,"r") as f:
-        jsonList = list(f)
-    
-    results = []
-    for jsonStr in jsonList:
-        result = json.loads(jsonStr)
-        results.append(result)
-
-    with open(trainFilePath,"w") as f:
-        json.dump(results,f,ensure_ascii=False)
-    
-    #validationData
-    with open(args.validation_file,"r") as f:
-        jsonList = list(f)
-    
-    results = []
-    for jsonStr in jsonList:
-        result = json.loads(jsonStr)
-        results.append(result)
-
-    with Path(evalFilePath).open("w") as f:
-        json.dump(results,f,ensure_ascii=False)
-
-    return trainFilePath,evalFilePath
-
 def main():
     args = forTrain.parse_args()
     # Sending telemetry. Tracking the example usage helps us better allocate resources to maintain them. The

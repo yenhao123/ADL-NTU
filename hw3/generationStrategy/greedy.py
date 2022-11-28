@@ -314,7 +314,10 @@ def main():
             generated_tokens = accelerator.unwrap_model(model).generate(
                 batch["input_ids"],
                 attention_mask=batch["attention_mask"],
-                **gen_kwargs,
+                max_length = args.val_max_target_length if args is not None else config.max_length,
+                num_beams = args.num_beams,
+                do_sample = args.do_sample
+
             )
 
             generated_tokens = accelerator.pad_across_processes(
