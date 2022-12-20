@@ -20,6 +20,7 @@ sh train.sh
 
 修改參數
 ```
+input_dir : input 放置的目錄
 ```
 
 ### Inference
