@@ -24,7 +24,6 @@ sh download_dataset.sh
 mv train_summary.csv input
 ```
 
-Download 
 
 ### Training
 ```
