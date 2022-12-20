@@ -15,11 +15,19 @@ pip install torch==1.12.1+cu116 torchvision==0.13.1+cu116 torchaudio==0.12.1 --e
 
 Dataset Prepare
 ```
+<<<<<<< HEAD
 # load hahow.zip
 mkdir input
 put hahow.zip and unzip it
 
 # load train_summary.csv
+=======
+# hahow.zip
+mkdir input
+put hahow.zip and unzip it
+
+# train_summary.csv
+>>>>>>> 1cf7af6034c4d0205e82df5d2e2270e8c7260de2
 sh download_dataset.sh
 mv train_summary.csv input
 ```
