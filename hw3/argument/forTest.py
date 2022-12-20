@@ -262,10 +262,8 @@ def parse_args():
     parser.add_argument(
         "--outputPath",
         type=str,
-        default="./output/jsonl"
+        default="./output.jsonl"
     )
-
-
     args = parser.parse_args()
 
     # Sanity checks

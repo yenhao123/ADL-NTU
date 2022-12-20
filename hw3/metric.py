@@ -21,7 +21,6 @@ def tokenize_and_join(sentences):
 
 rouge = Rouge()
 
-
 def get_rouge(preds, refs, avg=True, ignore_empty=False):
     """wrapper around: from rouge import Rouge
     Args:

@@ -17,12 +17,21 @@
 Fine-tuning a 🤗 Transformers model on summarization.
 """
 # You can also adapt this script on your own summarization task. Pointers for this are left as comments.
+<<<<<<< HEAD
+=======
+import os
+device = 3 
+os.environ["CUDA_VISIBLE_DEVICES"] = str(device)
+>>>>>>> 07cdf0187da457dc500e933f2b8f75e960a93d2d
 
 import argparse
 import json
 import logging
 import math
+<<<<<<< HEAD
 import os
+=======
+>>>>>>> 07cdf0187da457dc500e933f2b8f75e960a93d2d
 import random
 from pathlib import Path
 
@@ -54,9 +63,20 @@ from transformers import (
 from transformers.utils import check_min_version, get_full_repo_name, is_offline_mode, send_example_telemetry
 from transformers.utils.versions import require_version
 
+<<<<<<< HEAD
 # by own directory
 from argument import forEval
 from metric import get_rouge
+=======
+import tensorflow as tf
+config = tf.compat.v1.ConfigProto()
+config.gpu_options.per_process_gpu_memory_fraction = 0.3 # 占用GPU30%的显存
+session = tf.compat.v1.Session(config=config)
+
+# by own directory
+from argument import forEval
+from tw_rouge import get_rouge
+>>>>>>> 07cdf0187da457dc500e933f2b8f75e960a93d2d
 
 # Will error if the minimal version of Transformers is not installed. Remove at your own risks.
 check_min_version("4.25.0.dev0")
@@ -346,17 +366,24 @@ def main():
     print(preds)
     labels = [l for label in labels2D for l in label]
 
+<<<<<<< HEAD
     '''
     preds = ["Anker新款真無線藍牙耳機Liberty Air 2 Pro 引進台灣市場"]
     labels = ["Anker新款真無線藍牙耳機Liberty Air 2 Pro 引進台灣市場"]
     '''
+=======
+>>>>>>> 07cdf0187da457dc500e933f2b8f75e960a93d2d
     result = get_rouge(preds,labels)
     result = {key: round(value['f'] * 100,4) for key, value in result.items()}
 
     logger.info(result)
 
     #metrics
+<<<<<<< HEAD
     with open("lossANDmetric/eval/result.json","w") as f:
+=======
+    with open(args.lossANDmetricPath,"w") as f:
+>>>>>>> 07cdf0187da457dc500e933f2b8f75e960a93d2d
         json.dump(result,f,ensure_ascii=False)
     
     #save predictions

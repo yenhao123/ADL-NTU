@@ -23,6 +23,9 @@ import json
 import logging
 import math
 import os
+device = 2
+os.environ["CUDA_VISIBLE_DEVICES"] = str(device)
+
 import random
 from pathlib import Path
 
@@ -53,10 +56,10 @@ from transformers import (
 )
 from transformers.utils import check_min_version, get_full_repo_name, is_offline_mode, send_example_telemetry
 from transformers.utils.versions import require_version
+from torchsummary import summary
 
 # by own directory
 from argument import forTest
-from metric import get_rouge
 
 # Will error if the minimal version of Transformers is not installed. Remove at your own risks.
 check_min_version("4.25.0.dev0")
@@ -220,16 +223,6 @@ def main():
             raise ValueError(
                 f"--text_column' value '{args.text_column}' needs to be one of: {', '.join(column_names)}"
             )
-    '''
-    if args.summary_column is None:
-        summary_column = dataset_columns[1] if dataset_columns is not None else column_names[1]
-    else:
-        summary_column = args.summary_column
-        if summary_column not in column_names:
-            raise ValueError(
-                f"--summary_column' value '{args.summary_column}' needs to be one of: {', '.join(column_names)}"
-            )
-    '''
 
     # Temporarily set max_target_length for training.
     max_target_length = args.max_target_length
@@ -240,20 +233,6 @@ def main():
         #targets = examples[summary_column]
         inputs = [prefix + inp for inp in inputs]
         model_inputs = tokenizer(inputs, max_length=args.max_source_length, padding=padding, truncation=True)
-
-        # Tokenize targets with the `text_target` keyword argument
-        #labels = tokenizer(text_target=targets, max_length=max_target_length, padding=padding, truncation=True)
-
-        # If we are padding here, replace all tokenizer.pad_token_id in the labels by -100 when we want to ignore
-        # padding in the loss.
-        '''
-        if padding == "max_length" and args.ignore_pad_token_for_loss:
-            labels["input_ids"] = [
-                [(l if l != tokenizer.pad_token_id else -100) for l in label] for label in labels["input_ids"]
-            ]
-
-        model_inputs["labels"] = labels["input_ids"]
-        '''
         return model_inputs
 
     with accelerator.main_process_first():
@@ -301,6 +280,7 @@ def main():
     starting_epoch = 0
 
     model.eval()
+
     if args.val_max_target_length is None:
         args.val_max_target_length = args.max_target_length
 
@@ -320,26 +300,13 @@ def main():
             generated_tokens = accelerator.pad_across_processes(
                 generated_tokens, dim=1, pad_index=tokenizer.pad_token_id
             )
-            '''
-            labels = batch["labels"]
-            if not args.pad_to_max_length:
-                # If we did not pad to max length, we need to pad the labels too
-                labels = accelerator.pad_across_processes(batch["labels"], dim=1, pad_index=tokenizer.pad_token_id)
 
-            generated_tokens, labels = accelerator.gather_for_metrics((generated_tokens, labels))
-            '''
             generated_tokens = generated_tokens.cpu().numpy()
-            #labels = labels.cpu().numpy()
-            '''
-            if args.ignore_pad_token_for_loss:
-                # Replace -100 in the labels as we can't decode them.
-                labels = np.where(labels != -100, labels, tokenizer.pad_token_id)
-            '''
+
             if isinstance(generated_tokens, tuple):
                 generated_tokens = generated_tokens[0]
             decoded_preds = tokenizer.batch_decode(generated_tokens, skip_special_tokens=True)
-            #decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
-
+    
             decoded_preds = postprocess_text(decoded_preds)
             preds2D.append(decoded_preds)
 
@@ -362,7 +329,7 @@ def main():
         for i in range(len(preds)):
             resDict = {
                 "title" : preds[i],
-                "id" : int(ids[i])
+                "id" : ids[i]
             }
             json.dump(resDict,f,ensure_ascii=False)
             f.write("\n")

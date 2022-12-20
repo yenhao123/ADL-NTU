@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 hw1/data/*
 hw1/ckpt/*
 hw1/cache/*
@@ -5,12 +6,24 @@ hw2/dataset/*
 hw2/tmp/*
 hw2/results/*
 hw2/experiments/*
+=======
+>>>>>>> 07cdf0187da457dc500e933f2b8f75e960a93d2d
 hw3/transformers/*
 hw3/ADL22-HW3/*
 hw3/data/*
 hw3/model/*
 hw3/results/*
 hw3/lossANDmetric/*
+<<<<<<< HEAD
 fp/task1/dlrm-facebook/input/*
 fp/task1/rechub-sample/*
 fp/task1/torch-rechub/input/*
+=======
+hw2/dataset/*
+hw2/tmp/*
+hw2/results/*
+hw2/experiments/*
+hw1/data/*
+hw1/ckpt/*
+hw1/cache/*
+>>>>>>> 07cdf0187da457dc500e933f2b8f75e960a93d2d
