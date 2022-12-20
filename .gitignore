@@ -1,0 +1,16 @@
+hw1/data/*
+hw1/ckpt/*
+hw1/cache/*
+hw2/dataset/*
+hw2/tmp/*
+hw2/results/*
+hw2/experiments/*
+hw3/transformers/*
+hw3/ADL22-HW3/*
+hw3/data/*
+hw3/model/*
+hw3/results/*
+hw3/lossANDmetric/*
+fp/task1/dlrm-facebook/input/*
+fp/task1/rechub-sample/*
+fp/task1/torch-rechub/input/*
