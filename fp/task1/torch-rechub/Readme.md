@@ -21,7 +21,7 @@ put hahow.zip and unzip it
 
 # load train_summary.csv
 sh download_dataset.sh
-mv train_summary.csv input
+mv summary.csv input
 ```
 
 
